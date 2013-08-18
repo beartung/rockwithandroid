@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>网络请求</h3>
+        <p>移动应用和Ajax很重的前端网站类似，都是用Api和后端打交道，很少有纯粹的单机版App，那种一般都是工具，算不上移动互联网的应用。</p>
+        <p>想访问网络，首先要在AndroidManifest.xml中加入访问网络的权限，另外注意：<span class="tip">网络操作要异步进行，不能阻塞UI渲染线程！</span></p>
+        <pre class="code">
+        &lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+        </pre>
+        </p>
+        <p>安卓框架本身里面有两个用来做网络访问的常用库，感兴趣的同学可以看<a target="_blank" href="http://android-developers.blogspot.jp/2011/09/androids-http-clients.html">Android’s HTTP Clients</a>。这里只说结论，对应安卓2.2之前来讲HttpClient要优于HttpURLConnection，而从2.3向后的版本，HttpURLConnection是比较推荐的选择。</p>
+        <h4>HttpClient</h4>
+        <p>推荐一个基于Apache的HttpClient的封装库，<a target="_blank" href="https://github.com/loopj/android-async-http">loopj/android-async-http</a>，大家可以试用下。因为loopj的这个库是封装了异步操作的，如果需要自己做异步并且做更多的定制的话，还是要自己来做。不过这个库里提供的RequestParams和SimpleMultipartEntity这两个类很不错，支持处理普通的和multipart上传的form，比较轻便。我一般把用这两个拿出来和自己定制的HttpClient配合用。下面说下HttpClient需要注意的一些点：</p>
+        <ol>
+        <li>开启GZIP的支持，这样能节省些网络传输的数据量：
+        <pre class="code">
+    httpClient.addRequestInterceptor(new HttpRequestInterceptor() {
+        public void process(HttpRequest request, HttpContext context) {
+            if (!request.containsHeader(HEADER_ACCEPT_ENCODING)) {
+                request.addHeader(HEADER_ACCEPT_ENCODING, ENCODING_GZIP);
+            }
+        }
+    });
+
+    httpClient.addResponseInterceptor(new HttpResponseInterceptor() {
+        public void process(HttpResponse response, HttpContext context) {
+            final HttpEntity entity = response.getEntity();
+            final Header encoding = entity.getContentEncoding();
+            if (encoding != null) {
+                for (HeaderElement element : encoding.getElements()) {
+                    if (element.getName().equalsIgnoreCase(ENCODING_GZIP)) {
+                        response.setEntity(new InflatingEntity(response.getEntity()));
+                        break;
+                    }
+                }
+            }
+        }
+    });
+        </pre>
+        </li>
+        <li>因为很多应用是用的OAuth2认证，并且使用https协议来传输数据的，那么如果你的后端网站的证书配置有问题，或者在某些被改动的ROM或机型上会报https的证书异常。<span class="tip">可以使用信任所有证书的方法避免这一事情，但是前提是你知道后端网站值得信赖！</span>
+        <pre class="code">
+    public static void setTrustAllFactory(HttpClient httpClient){
+        try{
+            KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
+            trustStore.load(null, null);
+            SSLSocketFactory sf = new MySSLSocketFactory(trustStore);
+            sf.setHostnameVerifier(SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+            setSSLSocketFactory(httpClient, sf);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+        </pre>
+        <p>具体这个问题可以参考<a target="_blank" href="http://stackoverflow.com/questions/7622004/android-making-https-request">android-making-https-request</a>，一个典型的MySSLSocketFactory如下。</p>
+        <pre class="code">
+class MySSLSocketFactory extends SSLSocketFactory {
+    SSLContext sslContext = SSLContext.getInstance("TLS");
+
+    public MySSLSocketFactory(KeyStore truststore)
+            throws NoSuchAlgorithmException, KeyManagementException,
+            KeyStoreException, UnrecoverableKeyException {
+        super(truststore);
+
+        TrustManager tm = new X509TrustManager() {
+            public void checkClientTrusted(X509Certificate[] chain,
+                    String authType) throws CertificateException {
+            }
+
+            public void checkServerTrusted(X509Certificate[] chain,
+                    String authType) throws CertificateException {
+            }
+
+            public X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+        };
+
+        sslContext.init(null, new TrustManager[] { tm }, null);
+    }
+
+    @Override
+    public Socket createSocket(Socket socket, String host, int port,
+            boolean autoClose) throws IOException, UnknownHostException {
+        return sslContext.getSocketFactory().createSocket(socket, host, port,
+                autoClose);
+    }
+
+    @Override
+    public Socket createSocket() throws IOException {
+        return sslContext.getSocketFactory().createSocket();
+    }
+
+}
+        </pre>
+        </li>
+        <li>因为移动应用很多时候是走3G/2G的移动网络，所以超时时间需要设长一点，比如20秒。</li>
+        </ol>
+        <h4>HttpURLConnection</h4>
+        <p>推荐基于URLConnection的开源项目：<a target="_blank" href="https://github.com/kevinsawicki/http-request">kevinsawicki/http-request</a>，具体使用可以直接看项目主页的介绍。</p>
+        <p class="tip">注意在2.2及一下使用时，需要做下面的处理：</p>
+        <pre class="code">
+        if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.GINGERBREAD) {
+            HttpRequest.keepAlive(false);
+        }
+        </pre>
+        <p>具体见<a target="_blank" href="http://developer.android.com/reference/java/net/HttpURLConnection.html">HttpURLConnection</a>的“Avoiding Bugs In Earlier Releases”一节，以及<a target="_blank" href="https://code.google.com/p/android/issues/detail?id=2939">issues#2939</a>。</p>
+        <p><a href="index.html">目录</a>｜<a href="data.html">上一章</a>｜<a href="async.html">异步与AyncTask</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="http://code.dapps.douban.com/bear/RockWithAndroid">RockWithAndroid</a> by <a href="http://me.intra.douban.com/card/bear/">@Bear</a>
+	</div>
+</div>
+</body>
+</html>

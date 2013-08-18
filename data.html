@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>数据存储</h3>
+        <p>接下来来聊聊数据层，而做处理数据时，有一条原则请大家铭记于心：<span class="tip">耗时的IO操作要异步进行，不能阻塞UI渲染线程！</span><br>安卓的<a target="_blank" href="http://developer.android.com/guide/topics/data/data-storage.html">数据存储</a>主要分成下面3种类型，分别有适用的场景和条件。</p>
+        <h4>数据库SQLite</h4>
+        <p>安卓框架提供的数据库是<a target="_blank" href="http://developer.android.com/reference/android/database/sqlite/package-summary.html">SQLite</a>，本身是一个典型的关系数据库，是设计给嵌入式设备或是轻量级应用来用的。当然我记得官方宣称单表能到4G等指标，但是一般还是轻量级应用和客户端用的比较多。</p>
+        <p>SQLite最大的优点就是用起来和mysql一样，裸写SQL或者用安卓的ORM都比较方便，默认的数据库文件的路径是在应用目录里，一般是在内部存储里。</p>
+        <p>下面是一个典型的数据库类模板：</p>
+        <pre class="code">
+public class HelloDB {
+
+    private static int DATABASE_VERSION = 1;
+    private static final String DATABASE_NAME = "hello.db";
+
+    private DatabaseHelper helper;
+    private Context context;
+
+    public HelloDB(Context context) {
+        helper = new DatabaseHelper(context);
+        this.context = context;
+    }
+
+    public Context getContext() {
+        return context;
+    }
+
+    private class DatabaseHelper extends SQLiteOpenHelper {
+
+        public DatabaseHelper(Context context) {
+            super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        }
+        public void onCreate(SQLiteDatabase db) {
+            db.execSQL("CREATE TABLE notification (id INTEGER PRIMARY KEY, json TEXT, INTEGER new)");
+        }
+
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        }
+    }
+}
+        </pre>
+        <p>SQLite的使用需要注意的方面有：</p>
+		<ol>
+            <li>数据库适合存Api返回的结构，尤其是需要过滤，排序等操作的，可以使用数据库操作简化代码量的情况。</li>
+            <li>表结构设计可以使用一些技巧，应对结构变动。一般使用JSON的Api，字段可以如下设计：
+            <p>id | 需要排序的字段 | json字符串</p>
+            <p>直接存json字符串，这样做的好处是服务端数据结构有变化时，并不需要改动表的列，比较灵活。但是注意，需要排序（也就是where后面可能会出现的字段）还是单独成列比较好，用数据库就要充分利用SQL的特性，如果只是存储，那还不如用文件</p>
+            </li>
+            <li>Cursor需要及时关闭，而数据库对象一般不需要关闭，或者在主Activity退出时做清理时，关闭数据库对象。</li>
+            <li>需要根据数据库的版本，在Helper的onUpgrade里面处理相应的逻辑。</li>
+            <li>如果有比较大的文本或者媒体数据，不建议直接放数据库，而是单独存成文件，数据库里放索引。</li>
+            <li>如果有批量的查询或者写入操作，使用事务来提高效率。如下面的例子
+            <pre class="code">
+    try {
+        SQLiteDatabase db = helper.getWritableDatabase();
+        db.beginTransaction();
+        db.execSQL("update notification set new = 0");
+        db.setTransactionSuccessful();
+        db.endTransaction();
+    } catch (SQLiteException e) {
+        e.printStackTrace();
+    }
+            </pre>
+            </li>
+            <li>毕竟数据库有IO操作，如果批量插入或查询大量结果时，最好不用放到主线程来处理，那样会阻塞UI渲染。可以放到专门处理数据库操作的线程或者使用AsyncTask来处理。</li>
+        </ol>
+        <h4>SharePreferences</h4>
+        <p><a target="_blank" href="http://developer.android.com/reference/android/content/SharedPreferences.html">SharePreferences</a>是key/value的存储，实质上是应用目录里的一个XML文件。一般用来存储设置信息，应用现场信息等。<p>
+        <pre class="code">
+        SharedPreferences sp = context.getSharedPreferences("my_pref", MODE_PRIVATE);
+        String s = pref.getString("key", "default_value");
+        //edit这个名字略脑残，其实安卓的底层代码还是有很多丑陋的存在的 _(:з」∠)_
+        sp.edit().putString("key", "new_value").commit();<span class="tip">//注意！一定要commit，否则不会生效。</span>
+        </pre>
+        <p>getSharedPreferences的第二个参数mode，具体含义如下</p>
+        <ol>
+            <li>MODE_PRIVATE : 默认模式，只能当前application可读写</li>
+            <li>MODE_WORLD_READABLE/MODE_WORLD_WRITEABLE 在API 17里废弃，因为所有应用可读写是很危险的。</li>
+            <li>MODE_MULTI_PROCESS: 在API 11引入，用于一个应用，不同进程读写同一个SP，在安卓2.3里合法，但是行为不可预期，慎用。</li>
+        </ol>
+        <p>SP注意事项：</p>
+        <ol>
+        <li>因为SP本质是XML，也就是文本文件，所以密码或者token之类等敏感信息最好加密后存储，否则在root的机器上直接内容可见。</li>
+        <li>SP本身不能存过大的数据，如果数据比较大，会有读取和写入的性能问题。</li>
+        <li>可以用SP在不同Activity直接传递数据和通讯，但是更推荐使用BroadcastReceiver或者startActivityForResult来传递信息。</li>
+        </ol>
+        <h4>文件</h4>
+        <p>文件一般用于存储cache或者图片等大量数据，典型的如某个列表的前20条数据，存成一个cache文件；或图片的本地缓存。</p>
+        <p>一些数据量比较小，但是需要快速存取的可以使用<a target="_blank" href="http://developer.android.com/guide/topics/data/data-storage.html#filesInternal">内部存储</a>（其实内部存储和外部存储的性能差别并不太大）</p>
+        <pre class="code">
+        String FILENAME = "hello_file";
+        String string = "hello world!";
+
+        FileOutputStream fos = openFileOutput(FILENAME, Context.MODE_PRIVATE);
+        fos.write(string.getBytes());
+        fos.close(); //<span class="tip">注意！因为IO操作，一定要注意异步处理。</span>
+        </pre>
+        <p>如果是图片等比较占空间的数据，或者增长比较快数据，是要放到外部存储的。因为外部存储比较大，但是因为外部存储一般是SD卡，是可以被卸载的，需要监控具体的状态</p>
+        <pre class="code">
+        boolean mExternalStorageAvailable = false;
+        boolean mExternalStorageWriteable = false;
+        String state = Environment.getExternalStorageState();
+
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            // We can read and write the media
+            mExternalStorageAvailable = mExternalStorageWriteable = true;
+        } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            // We can only read the media
+            mExternalStorageAvailable = true;
+            mExternalStorageWriteable = false;
+        } else {
+            // Something else is wrong. It may be one of many other states, but all we need
+            //  to know is we can neither read nor write
+            mExternalStorageAvailable = mExternalStorageWriteable = false;
+        }
+        </pre>
+        <p>打开外部存储的文件的api是context的getExternalFilesDir()，是从API 8引入的，可以设定一个type，其实就是一个子目录。API 7以下使用getExternalStorageDirectory()得到外部存储的目录。因为现在的版本分布，我们可以认为API 8是兼容的最低线了。</p>
+        <p><a href="index.html">目录</a>｜<a href="framework.html">上一章</a>｜<a href="net.html">网络请求</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="http://code.dapps.douban.com/bear/RockWithAndroid">RockWithAndroid</a> by <a href="http://me.intra.douban.com/card/bear/">@Bear</a>
+	</div>
+</div>
+</body>
+</html>

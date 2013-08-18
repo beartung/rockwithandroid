@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>开发环境搭建</h3>
+        <p>本教程是以sdk和开发文档为基础的，IDE的话推荐<a target="_blank" href="http://www.jetbrains.com/idea/">Idea Intellij</a>。建议新手先用sdk和自己喜欢的文本编辑器如VIM或Emacs来做一段安卓开发，等熟练了，再转到IDE上。IDE可以提供方便的代码补全和调试功能。</p>
+        <p>另外推荐开发用的系统为Mac OSX或者Linux，应用级开发其实Mac更为合适，安卓系统级开发就推荐用Linux，比如Ubuntu。</p>
+		<ol>
+            <li>访问<a target="_blank" href="http://developer.android.com/sdk/index.html">http://developer.android.com/sdk/index.html</a>，下载对应系统的sdk。<br>注意只下载sdk就好了，不需要下载ADT，Eclipse也不是推荐使用的IDE。</li>
+            <li>设置环境变量，把sdk下的tools目录加到PATH里。如下面的.bashrc：
+            <pre class="code">
+            export ANDROID_SDK_ROOT="/Users/bear/Dev/android-sdk-mac_x86"
+            PATH="ANDROID_SDK_ROOT/tools:ANDROID_SDK_ROOT/platform-tools:PATH"</pre>
+            </li>
+            <li>安卓默认是用ant来打包的，如果你的系统没有ant，需要安装。可以到<a target="_blank" href="http://ant.apache.org/bindownload.cgi">Apache Ant</a>下载。一般的mac或者linux都是自带的。</li>
+        </ol>
+		<h3>建立第一个项目</h3>
+        <ol>
+            <li>列出来当前sdk版本列表：android list target</li>
+            <li>列出来模拟器列表：android list avd<br>因为模拟器的一些限制，推荐使用手机开发，更多模拟器的介绍可以参考<a target="_blank" href="http://developer.android.com/tools/help/emulator.html">Android Emulator</a>。在一些特殊场景下，模拟器还是能派上用场的，另外可以得益于虚拟化，模拟器也可以比较快。另外有同学推荐的<a target="_blank" href="https://cloud.genymotion.com">https://cloud.genymotion.com</a>也值得一战。</li>
+            <li>创建第一个项目：
+            <p>项目代码在<a target="_blank" href="http://code.dapps.douban.com/bear/RockWithAndroid/tree/master/hello">http://code.dapps.douban.com/bear/RockWithAndroid/tree/master/hello</a></p>
+            <pre class="code">
+    android create project -n Hello -t android-16 -p hello -k com.hello -a HelloActivity
+
+    Created project directory: hello
+    Created directory /Users/bear/Work/hello/src/com/hello //包名是com.hello
+    Added file hello/src/com/hello/HelloActivity.java //入口页面
+    Created directory /Users/bear/Work/hello/res //资源目录
+    Created directory /Users/bear/Work/hello/bin
+    Created directory /Users/bear/Work/hello/libs
+    Created directory /Users/bear/Work/hello/res/values 
+    Added file hello/res/values/strings.xml //文案，国际化
+    Created directory /Users/bear/Work/hello/res/layout //布局文件夹
+    Added file hello/res/layout/main.xml
+    //不同dpi的图片资源文件
+    Created directory /Users/bear/Work/hello/res/drawable-xhdpi
+    Created directory /Users/bear/Work/hello/res/drawable-hdpi
+    Created directory /Users/bear/Work/hello/res/drawable-mdpi
+    Created directory /Users/bear/Work/hello/res/drawable-ldpi
+    Added file hello/AndroidManifest.xml //manifest文件
+    Added file hello/build.xml //makefile
+    Added file hello/proguard-project.txt
+                </pre>
+    <pre class="code">
+    //如果已有项目代码，可以用下面的语句来生成makefile
+    android update project -n Hello -t android-16 -p hello -k com.hello -a HelloActivity
+    //生成的local.properties里面有sdk的路径，比如hello里我的是
+    sdk.dir=/Users/bear/Dev/android-sdk-mac_x86</pre>
+            </li>
+            <li>编译安装到手机上，手机要用USB连接到电脑上，并且勾选设置->开发者选项->USB调试。
+            <pre class="code">
+            cd hello && ant debug //编译打包
+            //adb具体可以看<a target="_blank" href="http://developer.android.com/tools/help/adb.html">Android Debug Bridge</a>
+            adb uninstall com.hello
+            adb install -r bin/Hello-debug.apk //安装
+            adb shell am start -n com.hello/com.hello.HelloActivity //启动
+            </pre>
+            如果多台设备（含模拟器）的话，可以用下面的脚本来批量做：
+            <pre class="code">
+            PHONES=`adb devices |grep "device$"|awk '{print $1}'`
+            for p in $PHONES
+            do
+                xxxx
+            done
+            </pre>
+            <p>一般的安卓应用通过看log就能完成调试工作，而真的需要调试器的话，还是使用IDE吧。</p>
+            <pre class="code">
+            //看所有log
+            adb logcat
+            //看某个TAG的所有level的log
+            adb logcat *:S TAG:*
+            </li>
+            <li>创建自己的keystore，打出可以发布的包
+            <pre class="code">
+            //根据提示输入相应信息
+            keytool -genkey -alias hello.keystore \
+                -keyalg RSA -validity 200000 -keystore hello.keystore
+            //配置ant.properties，加入下面两行
+            key.store=hello.keystore
+            key.alias=hello.keystore
+            </pre>
+
+            <pre class="code">
+            ant release
+            //看到提醒，输入刚才的密码，就能打出正式签名的包了，可以发布到Google Play和其他market了。
+            -release-prompt-for-password:
+                [input] Please enter keystore password (store:hello.keystore):
+            xxxxxxx
+                [input] Please enter password for alias 'hello.keystore':
+            xxxxxxx
+            ...
+            Release Package: /Users/bear/Work/hello/bin/Hello-release.apk
+            </pre>
+            <p>apk其实就是一个zip包，你可以改名后直接解开。<br>如果想了解更多反编译的，有下面的资料可以参考：<a target="_blank" href="https://code.google.com/p/android-apktool/">apktool</a>，<a target="_blank" href="https://code.google.com/p/dex2jar/">dex2jar</a>，<a target="_blank" href="http://java.decompiler.free.fr/?q=jdgui">JD-GUI</a>。
+            </p>
+            </li>
+            <li>使用<a target="_blank" href="http://www.gradle.org/">Gradle</a>来构建
+            <p>ant是本地编译，但是如果不用IDE的增量编译太慢；而<a target="_blank" href="http://maven.apache.org/">maven</a>的构建，需要依赖maven的<a target="_blank" href="http://search.maven.org/">包服务器</a>，如果不是自己搭建了<a target="_blank" href="http://www.sonatype.org/nexus/">Sonatype Nexus</a>的话也不是太方便。Google推荐的新的构建方式是使用Gradle。现在的缺点是有一些从apk lib转到aac的包还没有，需要自己做。有兴趣了解的同学可以看<a target="_blank" href="http://code.dapps.douban.com/bear/RockWithAndroid/blob/master/hello/build.gradle">RockWithAndroid/hello/build.gradle</a>。因为还比较新，某熊也了解有限。</p>
+            </li>
+        </ol>
+        <p>总结下，本章我们建了一个Hello World，而且能够发布到Google Play上，但是真正的应用代码并没有写。下一章，我们会了解安卓开发框架的主要组成部分。</p>
+        <p><a href="index.html">目录</a>｜<a href="os.html">上一章</a>｜<a href="framework.html">安卓开发框架</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="http://code.dapps.douban.com/bear/RockWithAndroid">RockWithAndroid</a> by <a href="http://me.intra.douban.com/card/bear/">@Bear</a>
+	</div>
+</div>
+</body>
+</html>
