@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>ListView</h3>
+        <p>大部分应用的内容都是是纵向的列表，因为手机上下划屏成本很低，而且用户对下面的内容长度是有心理预期的，所以大部分应用都是使用这个设计的。对应这个需求，安卓里面提供了<a target="_blank" href="http://developer.android.com/reference/android/widget/ListView.html">ListView</a>这个控件，是做安卓开发打交道最多的，类似iOS的TableView。</p>
+        <p>ListView是一个多行的列表，每行是一个item，item本身对应一个Layout。ListView本身是AdapterView的派生类，需要绑定Adapter来负责管理生成对应每行的item。item的View是复用的，即使Adapter里面的item有成百上千，但是真正生成的View一般只有屏幕显示的那么多个。这和iOS的TableCell的复用是一致的。</p>
+        <pre class="code">
+        //下面是一个ListView在layout里的样子
+        &lt;ListView
+            android:id="@id/list"
+            android:layout_height="match_parent"
+            android:layout_width="match_parent"
+            android:fadingEdge="none"
+            android:fastScrollEnabled="false"
+            android:cacheColorHint="#00000000"
+        /&gt;
+        //下面是具体的一个item的layout，item_notify.xml
+        &lt;?xml version="1.0" encoding="utf-8"?&gt;
+        &lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="10dp"
+            android:gravity="center_vertical"
+            &gt;
+            &lt;RelativeLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_weight="1.0"
+                &gt;
+                &lt;TextView
+                    android:id="@id/title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textColor="#000000"
+                    android:paddingBottom="2dp"
+                    android:layout_alignParentLeft="true"
+                    android:layout_alignParentTop="true"
+                    /&gt;
+                &lt;TextView
+                    android:id="@id/time"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="14sp"
+                    android:textColor="#999999"
+                    android:layout_below="@id/title"
+                    android:layout_alignParentLeft="true"
+                    android:layout_alignParentBottom="true"
+                    /&gt;
+            &lt;/RelativeLayout&gt;
+            &lt;ImageView
+                android:id="@id/icon"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:scaleType="centerInside"
+                /&gt;
+        &lt;/LinearLayout&gt;
+        </pre>
+        <p>下面是典型的调用过程：</p>
+        <pre class="code">
+        ListView list = (ListView)findViewById(R.id.list);
+        ListAdapter adapter = new ListAdapter();
+        list.setAdapter(adapter);
+        </pre>
+		<h4>Adapter</h4>
+        <pre class="code">
+    //假设数据是存在一个叫做data 的数组里的
+    class ListAdapter extends BaseAdapter{
+        //返回item的数量
+        public int getCount() {
+            return data.length;
+        }
+
+        //返回对应位置item的数据对象
+        public Object getItem(int position) {
+            return data[position];
+        }
+
+        //返回对应位置item的id，一般不直接用这个函数，而是getItem得到对象后，用对象的id
+        public long getItemId(int position) {
+            return 0;
+        }
+
+        //使用ViewHolder机制，避免findViewById的操作，优化性能
+        public View getView(int position, View convertView, ViewGroup parent){
+            //<span class="tip">注意这里使用了View的tag属性来把一个ViewHolder对象绑定在一个convertView上面</span>
+            //<span class="tip">convertView就是对应item的真正View</span>
+            ViewHolder holder = null;
+            //如果没有可以复用的convertView，也就是真正要创建item的layout
+            if (convertView == null) {
+                holder = new ViewHolder();
+                convertView = getLayoutInflater().inflate(R.layout.item_notify, null);
+                holder.icon = (ImageView)convertView.findViewById(R.id.icon);
+                holder.title = (TextView)convertView.findViewById(R.id.title);
+                holder.time = (TextView)convertView.findViewById(R.id.time);
+                //把holder对象绑定到convertView上
+                convertView.setTag(holder);
+            //如果convertView已经被创建过，也就是说该item被复用
+            } else {
+                //从tag里取出来holder对象
+                holder = (ViewHolder) convertView.getTag();
+            }
+            refreshView(position, holder);
+            return convertView;
+        }
+
+        private void refreshView(int position, ViewHolder h) {
+            //根据position对应的item数据对象，具体的更新UI
+        }
+    };
+
+    static class ViewHolder {
+        ImageView icon;
+        TextView title;
+        TextView time;
+    };
+        </pre>
+		<h4>优化</h4>
+		<ol>
+            <li>单个item的版式尽量规整， 如果有大图，一屏内为1-1.5个item比较合适</li>
+            <li>如果图片较大，尽量固定规格，尤其高度。</li>
+            <li>如果单个item的Layout比较复杂，可以考虑使用<a href="http://developer.android.com/reference/android/view/ViewStub.html">ViewSub</a>的缓式创建，优化ListView的第一次加载速度</li>
+            <li>尽量减少item的Layout层级，如果结构简单，每个item只有5个左右的View的化，直接使用隐藏/显示组件，性能也足够，不用使用ViewSub。</li>
+            <li>当item和item内的控件都可以点击时，需要留出些空白区域，使单条容易点击。
+            <pre class="code">
+        &lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            <span class="tip">//这里的利用了Layout的descendantFocusability属性</span>
+            <span class="tip">//afterDescendants表示单条只有在里面的控件没有得到焦点时，最外面的item整个才获得焦点。</span>
+            android:descendantFocusability="afterDescendants"
+            &gt;
+            ...
+            &lt;Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                /&gt;
+        &lt;/LinearLayout&gt;
+            </pre>
+            </li>
+            <li>单条操作如果不是单击或长按时，需要给提示（比如滑动删除）。</li>
+            <li>如果图片太大，滑动卡顿，可以考虑只在滑动停止时加载图片，滑动时不加载，使用默认底色或图片。
+            <pre class="code">
+    //给ListView设置AbsListView.OnScrollListener
+    listView.setOnScrollListener(new AbsListView.OnScrollListener(){
+        public void onScrollStateChanged(AbsListView view, int scrollState){
+            if (lastScrollState == SCROLL_STATE_IDLE){
+                //加载图片
+            }
+        }
+
+    });
+            </pre>
+            </li>
+            <li>如果需要做“主帖+回复列表”这种样式，可以使用addHeaderView。</li>
+            <li>推荐使用类似gmail的新版<a target="_blank" href="https://github.com/chrisbanes/ActionBar-PullToRefresh">ActionBar-PullToRefresh</a>作下拉刷新效果。</li>
+            <li>做翻页时，不推荐“上拉加载更多”，而是使用到底自动加载，或者到底显示加载更多按钮，点击后加载更多。具体实现可以到github搜索android endless。</li>
+        </ol>
+        <p><a href="index.html">目录</a>｜<a href="async.html">上一章</a>｜<a href="image.html">图片处理</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="https://github.com/beartung/rockwithandroid">RockWithAndroid</a> by <a href="http://github.com/beartung">@Bear</a>
+	</div>
+</div>
+</body>
+</html>

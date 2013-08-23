@@ -105,6 +105,11 @@
             <p>apk其实就是一个zip包，你可以改名后直接解开。<br>如果想了解更多反编译的，有下面的资料可以参考：<a target="_blank" href="https://code.google.com/p/android-apktool/">apktool</a>，<a target="_blank" href="https://code.google.com/p/dex2jar/">dex2jar</a>，<a target="_blank" href="http://java.decompiler.free.fr/?q=jdgui">JD-GUI</a>。
             </p>
             </li>
+            <li>做压缩对齐，也就是zipalign
+            <pre class="code">
+            zipalign -v -f 4 Hello-release.apk Hello-release-align.apk
+            </pre>
+            </li>
             <li>使用<a target="_blank" href="http://www.gradle.org/">Gradle</a>来构建
             <p>ant是本地编译，但是如果不用IDE的增量编译太慢；而<a target="_blank" href="http://maven.apache.org/">maven</a>的构建，需要依赖maven的<a target="_blank" href="http://search.maven.org/">包服务器</a>，如果不是自己搭建了<a target="_blank" href="http://www.sonatype.org/nexus/">Sonatype Nexus</a>的话也不是太方便。Google推荐的新的构建方式是使用Gradle。现在的缺点是有一些从apk lib转到aac的包还没有，需要自己做。有兴趣了解的同学可以看<a target="_blank" href="http://code.dapps.douban.com/bear/RockWithAndroid/blob/master/hello/build.gradle">RockWithAndroid/hello/build.gradle</a>。因为还比较新，某熊也了解有限。</p>
             </li>
