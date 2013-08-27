@@ -128,6 +128,7 @@
         TextView time;
     };
         </pre>
+        <p class="tip">当adapter的数据有任何变化时，需要及时调用adapter.notifyDataSetChanged()来通知ListView来更新界面，否则会在滑动或UI重绘时，因为数据已经变了，导致fc。</p>
 		<h4>优化</h4>
 		<ol>
             <li>单个item的版式尽量规整， 如果有大图，一屏内为1-1.5个item比较合适</li>

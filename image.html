@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>图片处理</h3>
+        <p>现在的移动设备DPI越来越高，应用的图片的分辨率也是越来越高，在具体实现时，就需要了解安卓的图片处理机制，才能让你的应用在处理大量高清图片时，不崩不卡。</p>
+        <p>其实做到这一点并不容易，在安卓上的应用，复杂的时间图片流做到流畅的应用并不多见。Google Plus算是一个最好的例子，他的图片规格多样，但是十分流畅。Google的团队做了大量优化的工作，就图片处理这块，我们普通开发者能做的工作有那些呢？</p>
+        <h4>Bitmap</h4>
+        <p>安卓框架本身是用<a target="_blank" href="http://developer.android.com/reference/android/graphics/Bitmap.html">Bitmap</a>这个封装对象，如果是自己手动生成Bitmap的话， 可以仔细看下<a target="_blank" href="http://developer.android.com/reference/android/graphics/Bitmap.Config.html">Bitmap.Config</a>。</p>
+        <p>一般我们都是从网络下载图片到本地后，再加载显示。最大的问题是内存，所以在列表或者多图场景下，最好是缩成所需要规格的Bitmap来使用，如不是直接使用高分辨率的大图。</p>
+        <p>在用BitmapFactory做decode图片时，安卓本身根据机器和系统版本，会有一个解析图片的内存上限，如果图片比较大，很容易造成OOM错误，所以要使用下面的策略，尽量使生成的图片最小。</p>
+        <pre class="code">
+        Bitmap pic = null;
+        int width = 640; //典型的取屏幕宽度或者ImageView的宽度
+        try {
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            //只是得到具体宽高，并不真正decode图片
+            options.inJustDecodeBounds = true;
+            pic = BitmapFactory.decodeFile(path, options);
+            //真正进行decode
+            options.inJustDecodeBounds = false;
+            //int be = options.outWidth / width;
+            //不使用2的幂数缩放
+            options.inSampleSize = 1;
+            if (options.outWidth &gt; width){
+                //使用比例缩放
+                options.inScaled = true;
+                options.inDensity = options.outWidth;
+                options.inTargetDensity = width;
+            }
+            pic = BitmapFactory.decodeFile(path, options);
+        }catch (OutOfMemoryError e){
+            //还是要防止OOM 
+        }
+        </pre>
+        <p>Bitmap类还可以做一些图片的简单处理，比如圆角，灰度等效果，比较容易找到实现代码。这里给出一个取Exif的方向的函数：<p>
+        <pre class="code">
+    public static int getExifOrientation(String filepath) {
+        int degree = 0;
+        try{
+            Class cls = Class.forName("android.media.ExifInterface");
+            Class[] types = new Class[]{ String.class };
+            Constructor cons = cls.getConstructor(types);
+
+            types = new Class[] { String.class, Integer.TYPE };
+            Method method = cls.getMethod("getAttributeInt", types);
+
+            Object[] args = new Object[] { filepath };
+            Object exif = cons.newInstance(args);
+
+            if (exif != null) {
+                args = new Object[] {"Orientation", -1};
+                int orientation = (Integer) method.invoke(exif, args);
+                if (orientation != -1) {
+                    switch(orientation) {
+                        //case android.media.ExifInterface.ORIENTATION_ROTATE_90:
+                        case 6:
+                            degree = 90;
+                            break;
+                        //case android.media.ExifInterface.ORIENTATION_ROTATE_180:
+                        case 3:
+                            degree = 180;
+                            break;
+                        //case android.media.ExifInterface.ORIENTATION_ROTATE_270:
+                        case 8:
+                            degree = 270;
+                            break;
+                    }
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return degree;
+    }
+        </pre>
+        <p>另外还推荐一个比较高性能的类似高斯模糊的函数，具体见<a target="_blank" href="http://stackoverflow.com/questions/12198045/fast-variable-blur-or-blur-library-in-android">fastblur</a>。</p>
+        <p>对于滤镜本身，还没有看到比较靠谱的开源实现，因为性能原因，估计得用NDK，用c来实现。<p>
+        <h4>图片加载器</h4>
+        <p>真实项目中，往往是讲网络的图片加载到对于的ImageView或自定义的View里去。图片加载器就是抽象和封装这些操作的库，基本包括了图片的异步下载，本地SD卡缓存，图片文件decode成Bitmap对象，Bitmap对象的内存缓存，和具体View的绑定这些环节。而且最好能够定制使用的内存缓存大小，是否能用LRU策略，能不能方便对图片进行裁剪缩放。某熊曾经自己写过一个简单的加载器，也实际用过一段时间，但是我更推荐现在比较流行的2个图片加载器。</p>
+        <p><a target="_blank" href="https://github.com/nostra13/Android-Universal-Image-Loader">nostra13/Android-Universal-Image-Loader</a>，是我厂项目里用的比较多的一个项目，支持方便的配置，效果不错。不过需要注意的一点，这个加载器的缓存策略是根据图片尺寸的，所以同一个图片文件，被用在不同尺寸的View里，会有多个Bitmap对象。</p>
+        <p><a target="_blank" href="http://square.github.io/picasso/">picasso</a>，项目地址是<a target="_blank" href="https://github.com/square/picasso">https://github.com/square/picasso</a>，是Square的开源项目，用起来比较简单，而且提供一个setDebug(true)的方式，可以方便的看到正在加载的图片是从网络，磁盘还是内存里加载的。这个项目相当比较新，虽然没研究过代码，但是公司出品，相信品质还是不错的。</p>
+        <p>另外提示下，养成及时解绑ImageView和Bitmap的操作，也就是某个ImageView不再显示了，就setImageBitmap(null)，使得Bitmap的内存对象能及时回收，减少内存占用。</p>
+        <p><a href="index.html">目录</a>｜<a href="list.html">上一章</a>｜<a href="intent.html">Intent与应用互调</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="https://github.com/beartung/rockwithandroid">RockWithAndroid</a> by <a href="http://github.com/beartung">@Bear</a>
+	</div>
+</div>
+</body>
+</html>
