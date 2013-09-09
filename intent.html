@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>Intent与应用互调</h3>
+        <p>只前打过下面的比方，Activity就像是网页，而超链接就是安卓里面的Intent。而Intent在安卓的框架里用的很多，这里总结下Intent本身的用法。</p>
+        <h4>Intent的构造方式</h4>
+		<ol>
+        <li>
+        对于同一个应用内，优先使用Intent的class方式来构造，比如：
+        <pre class="code">
+        context.startActivity(new Intent(context, HomeActivity.class));
+        </pre>
+        因为这样系统框架在解析Intent时，可以直接找到对应的包和类，最为高效。
+        </li>
+        <li>使用某个特定的Action来构造，注意：<span class="tip">字符串需要有namespace前缀保证不冲突，本身是大小写敏感</span>
+        <pre class="code">
+        //一个好的例子，com.bear.test限定了范围，ACTION_VIEW表意，用大写来区分
+        context.startActivity(new Intent("com.bear.test.ACTION_VIEW"));
+        //坏的例子，没有范围，容易和别的应用冲突
+        <del>context.startActivity(new Intent("ACTION_VIEW"));</del>
+        </pre>
+        因为系统是根据这个字符串来匹配查找对应的处理类，所以性能比上面的方式要弱，而且如果你的Action和别人重复了，如果就Activity而言，系统会弹出选择对话框，由用户选择用那个打开。
+        </li>
+        <li>使用Acition和URI方式创建Intent，比如下面代码：
+        <pre class="code">
+        context.startActivity(new Intent.ACTION_VIEW, 
+                    Uri.parse("http://www.douban.com/online/11601355/")));
+        //对应的Activity在manifest里的声明
+        &lt;intent-filter&gt;
+            &lt;action android:name="android.intent.action.VIEW"/&gt;
+            &lt;category android:name="android.intent.category.DEFAULT"/&gt;
+            &lt;category android:name="android.intent.category.BROWSABLE"/&gt;
+            &lt;data android:host="www.douban.com" android:pathPattern="/online/.*/"
+                                android:scheme="http"/&gt;
+        &lt;/intent-filter&gt;
+        </pre>
+        这种方式可以在响应点击url链接时，调用对应的Activity时使用。
+        </li>
+        </ol>
+        <p>从上面可以看出，安卓框架会从最精准到最宽泛的条件来匹配响应Intent的处理。所以无论构造还是响应Intent时，都要注意这个原则。</p>
+        <h4>Intent的常见用途</h4>
+        <ol>
+            <li>调用Activity，如上面所列</li>
+            <li>调用Activity，并获得返回</li>
+            <li>启动，绑定，关闭Sevice</li>
+            <li>发广播给BroadcastReceiver</li>
+        </ol>
+        <p>另外Intent可以挟带数据，使用key/value的方式，比较方便，使用putExtra和getXxxExtra方法。注意的是，Intent里最好不要存太大的数据，比如比较大的Bitmap。</p>
+        <h4>应用互调</h4>
+        <p>因为有Intent这样超链接的存在，在安卓上，应用直接互相调用功能来配合完成任务是很常见的做法。比如调用Camera的拍照功能，获得照片；调用Gallery来获取图片；使用分享组件，讲文字或者图片分享到其他应用，如Google Plus，Instagram等。</p>
+        <pre class="code">
+        int REQUEST_CAMERA = 100;
+        try {
+            Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            String path = ExternalStorageUtils.getExternalCacheDir(
+                        getPackageName()).getAbsolutePath() + File.separator + "test.jpg"
+                        );
+            File file = new File(path);
+            intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(file));
+            startActivityForResult(intent, REQUEST_CAMERA);
+        } catch (ActivityNotFoundException e) {
+            //要捕获这个异常，否则在没有Camera应用的设备上会fc
+        }
+        </pre>
+        <p>上面的代码就是调用相机来拍照并获得照片的例子。另外一个典型的例子是使用<a target="_blank" href="http://developer.android.com/reference/android/widget/ShareActionProvider.html">ShareActionProvider</a>来分享。</p>
+        <pre class="code">
+    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+    //设置分享的标题
+    shareIntent.putExtra(Intent.EXTRA_SUBJECT, "美图一张");
+    //shareIntent.setType("text/plain"); //如果只是分享文字的话
+    //设置分享的是图片
+    shareIntent.setType("image/*");
+    String path = ExternalStorageUtils.getExternalCacheDir(
+                        getPackageName()).getAbsolutePath() + File.separator + "test.jpg"
+                        );
+    File file = new File(path);
+    //设置分享图片的路径
+    shareIntent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(file));
+        </pre>
+        <p>上面是构造分享的Intent，这样所有接受分享的应用都能被列出来，调用。当然比较恶心的某些应用比如微信，如果使用默认的系统的标准ACTION_SEND，得到的结果并不是最好的，需要使用他们的SDK，除非特别需要，不建议使用SDK，那样会造成分享功能的复杂化。</p>
+        <p><a href="index.html">目录</a>｜<a href="image.html">上一章</a>｜<a href="back.html">Service和BroadcastReceiver</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="https://github.com/beartung/rockwithandroid">RockWithAndroid</a> by <a href="http://github.com/beartung">@Bear</a>
+	</div>
+</div>
+</body>
+</html>

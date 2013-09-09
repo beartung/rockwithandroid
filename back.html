@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>Service和BroadcastReceiver</h3>
+        <p>安卓本身是一个多任务的系统，所以可以有真正的后台服务存在。<a target="_blank" href="http://developer.android.com/reference/android/app/Service.html">Service</a>就是对应的封装类。</p>
+        <p>在实际中，典型的后台服务需求有播放，推送/同步数据，定时任务这些类型。前两者是使用典型的C/S结果的场景，而后者其实在安卓上面可以使用Alarm的机制来做到比较轻的方案，不用后台常驻一个服务。</p>
+        <p>如果希望服务是单独开一个进程的话，需要在manifest里使用下面的声明，":remote"标识该进程的名字，确切的讲是冒号后面是进程的名字。单独使用进程的好处是彻底和UI进程分开，但是也会有麻烦的地方，比如通讯是跨进程的，需要走AIDL接口，或者使用BroadcastReceiver监听广播，而且传输的数据大小也不能太大。所以除非有额外的好处，并不推荐单独起进程。</p>
+        <pre class="code">
+            &lt;service android:name=".app.SyncService" android:process=":remote" /&gt;
+        </pre>
+        <p>不单独开进程的话，Service本身默认也是在主线程里的，所以如果有耗时的计算或者IO操作，还是需要自己起线程或者使用AsyncTask来异步处理。</p>
+        <p>具体的例子可以参考<a target="_blank" href="http://developer.android.com/reference/android/app/Service.html">Service</a>的Local Service Sample部分。使用IBinder得到Service的Client，直接调用对应的接口，这样效率比较高。但是由于上面所说的异步处理的问题，所以直接调用Service的接口都是阻塞的，适用于返回结果的情况。</p>
+        <p>所以如果Service里面的操作比较耗时的话，就需要利用异步加回调的机制和Client通信。具体做法可以是下面的方法:</p>
+        <ol>
+            <li>Client调用Service接口，直接返回，然后Client起BroadcastReceiver，等Service异步操作完，发广播得到结果。</li>
+            <li>Client和Service都使用BroadcastReceiver，使用广播互发消息。<span class="tip">这个方案因为都是使用广播，会增大延时，并且Intent本身数据有大小限制，太大的数据没法直接传递。</span></li>
+        </ol>
+        <h4>BroadcastReceiver</h4>
+        <p><a target="_blank" href="http://developer.android.com/reference/android/content/BroadcastReceiver.html">BroadcastReceiver</a>可以在manifest里面声明，也可以在代码里直接使用 Context.registerReceiver()动态注册。典型的使用可以是Activity和Service通讯，也可以是Activity间互相通讯，还可以是不同应用间通讯。因为使用方便和灵活，容易被滥用。</p>
+        <ol>
+            <li>在Activity中，如果在onResume中注册，那么需要在onPause里注销，减少系统开销。</li>
+            <li>如果在onReceive里的操作比较耗时，或者希望Receiver的有更长的生命周期，需要和Service一起配合使用。</li>
+        </ol>
+        <p>在安卓的support包里，新加入了<a target="_blank" href="http://developer.android.com/reference/android/support/v4/content/LocalBroadcastManager.html">LocalBroadcastManager</a>，对于应用内部需要使用广播的情况更加友好和高效了。</p>
+        <p>LocalBroadcastManager所发的广播，并且注册的Receiver的监听，都只是针对当前应用，所以从安全和性能都比全局的Receiver和广播要高的多。具体使用如下：</p>
+        <pre class="code">
+        LocalBroadcastManager manager = LocalBroadcastManager.getInstance(context);
+        manager.registerReceiver(receiver, filter);
+        manager.sendBroadcast(intent);
+        //如果有对应的Receiver相当于直接调用其onReceiver，所以会阻塞直到处理完成才返回
+        manager.sendBroadcastSync(intent); 
+        manager.unregisterReceiver(receiver);
+        </pre>
+        <h4>IntentService</h4>
+        <p><a target="_blank" href="http://developer.android.com/reference/android/app/IntentService.html">IntentService</a>有点类似AsyncTask，也是运行在独立线程里，不会阻塞UI线程，可以看成是一种轻量级的Service。通过调用startService(Intent) 来调用IntentService，在onHandleIntent(Intent)里面处理对应Intent，执行操作。</p>
+        <ol>
+            <li>和Service不同的地方是，IntentService是需要时启动，处理完成后就退出的，并不真正后台长期存在</li>
+            <li>IntentService同时只能处理一个请求，也就是说只会起一个工作线程</li>
+            <li>IntentService适用于业务简单的后台单次或者重复性任务，Client只是调用，不需要等待结果的情况</li>
+        </ol>
+        <h4>AlarmManager</h4>
+        <p><a target="_blank" href="http://developer.android.com/reference/android/app/AlarmManager.html">AlarmManager</a>提供了系统闹钟服务的接口，利用闹钟服务，可以达到Cron的效果。一般可以和IntentService搭配使用，比如定时后台同步数据，定时清理临时文件等操作。</p>
+        <pre class="code">
+        AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(context, SyncService.class);
+        PendingIntent pIntent = PendingIntent.getService(context, 
+                                        0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, 
+                                System.currentTimeMillis() + 2*60*1000, 2*60*1000, pIntent);
+        </pre>
+        <p><a href="index.html">目录</a>｜<a href="intent.html">上一章</a>｜<a href="screen.html">适配</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="https://github.com/beartung/rockwithandroid">RockWithAndroid</a> by <a href="http://github.com/beartung">@Bear</a>
+	</div>
+</div>
+</body>
+</html>

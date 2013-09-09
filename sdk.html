@@ -20,8 +20,7 @@
             <li>设置环境变量，把sdk下的tools目录加到PATH里。如下面的.bashrc：
             <pre class="code">
             export ANDROID_SDK_ROOT="/Users/bear/Dev/android-sdk-mac_x86"
-            export PATH="$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/platform-tools:$PATH"
-            </pre>
+            PATH="$ANDROID_SDK_ROOT/tools:$ANDROID_SDK_ROOT/platform-tools:$PATH"</pre>
             </li>
             <li>安卓默认是用ant来打包的，如果你的系统没有ant，需要安装。可以到<a target="_blank" href="http://ant.apache.org/bindownload.cgi">Apache Ant</a>下载。一般的mac或者linux都是自带的。</li>
         </ol>
@@ -109,6 +108,14 @@
             <li>做压缩对齐，也就是zipalign
             <pre class="code">
             zipalign -v -f 4 Hello-release.apk Hello-release-align.apk
+            </pre>
+            </li>
+            <li>手机截屏，一般4.x的手机，同时按开关和音量下键，就可以直接截屏。
+            <pre class="code">
+            //linux下面截屏并保存到电脑上
+            adb shell screencap -p | sed 's/\r$//' &gt; screen.png
+            //Mac OSX下面截屏并保存到电脑上
+            adb shell screencap -p | perl -pe 's/\x0D\x0A/\x0A/g &gt; screen.png
             </pre>
             </li>
             <li>使用<a target="_blank" href="http://www.gradle.org/">Gradle</a>来构建
