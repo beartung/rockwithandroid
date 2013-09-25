@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>Widget</h3>
+        <p>安卓的Widget是一个满好玩儿的特性，但是Widget本身的功能一直都比较弱，在安卓3.x做了些增强，4.x又引入了锁屏Widget等新的功能。典型的Widget有入口型，展示型，独立型这几种。</p>
+        <img src="img/widget2.png">
+        <p>上面的Google+和豆瓣说就是入口型的，微薄应该是展示型的，而下图的豆瓣电台的可以算是独立型的Widget。</p>
+        <img src="img/widget.png">
+        <h4>格子尺寸</h4>
+        <p>Widget所占的空间是以格子数来计算的，从1x1到4x4格的空间不等。一个格子的大小是：竖屏80x100，横屏106x74。</p>
+        <img src="img/widget3.png" class="img-full">
+        <img src="img/widget4.png" class="img-full">
+        <img src="img/widget5.png" class="img-full">
+        <p>上图左边解释了Widget的Box结构。右边是格子和最小高宽的对应关系。另外在平板下最大可以是8X7格子；而3.1开始会自动缩放，最小高宽就是默认高宽；4.0开始布局时会满足最小高宽下的最少格</p>
+        <h4>Widget定义</h4>
+        <pre class="code">
+//在res/xml/widget_larget.xml里声明provider
+&lt;appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:updatePeriodMillis="0"            //widget的更新间隔，0是不定时更新，而是等待广播更新
+    android:initialLayout="@layout/widget_large" //对应的布局
+    android:previewImage="@drawable/widget_large_preview" //在Widget列表的预览图
+    android:minWidth="290dp"
+    android:minHeight="290dp"
+    &gt;
+&lt;/appwidget-provider&gt; 
+
+//在manifest里面声明对应的receiver
+&lt;receiver android:name="WidgetLarge" android:label="@string/widget_large"&gt;
+    &lt;intent-filter&gt;
+        &lt;action android:name="android.appwidget.action.APPWIDGET_UPDATE"/&gt;
+    &lt;/intent-filter&gt;
+    &lt;intent-filter&gt;
+        &lt;action android:name="com.rock.android.intent.WIDGET"/&gt;
+    &lt;/intent-filter&gt;
+    &lt;meta-data android:name="android.appwidget.provider"
+                                android:resource="@xml/widget_large"/&gt;
+&lt;/receiver&gt;
+</pre>
+        <p>其他的部分，就只是在receiver里面处理Widget的更新，设置对应的控件而已了。</p>
+        <p><a href="index.html">目录</a>｜<a href="webview.html">上一章</a>｜<a href="other.html">其他</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="https://github.com/beartung/rockwithandroid">RockWithAndroid</a> by <a href="http://github.com/beartung">@Bear</a>
+	</div>
+</div>
+</body>
+</html>
