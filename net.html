@@ -109,7 +109,7 @@ class MySSLSocketFactory extends SSLSocketFactory {
         </ol>
         <h4>HttpURLConnection</h4>
         <p>推荐基于URLConnection的开源项目：<a target="_blank" href="https://github.com/kevinsawicki/http-request">kevinsawicki/http-request</a>，具体使用可以直接看项目主页的介绍。</p>
-        <p class="tip">注意在2.2及一下使用时，需要做下面的处理：</p>
+        <p class="tip">注意在2.2及以下使用时，需要做下面的处理：</p>
         <pre class="code">
         if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.GINGERBREAD) {
             HttpRequest.keepAlive(false);

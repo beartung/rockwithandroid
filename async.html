@@ -16,10 +16,107 @@
         <p>做移动应用开发，尤其是iOS和安卓，首先要有下面的认知：
 		<ol>
             <li>UI控件不是线程安全的，所以UI的控制和更新必须是UI线程（主线程）来做。</li>
-            <li></li>
+            <li>无论是本地IO还是网络请求数据，耗时操作一定要在线程里异步处理，不能阻塞主线程。</li>
+            <li>不要有过多的并发，因为毕竟移动设备的性能和电力因素，一般来说并发线程不要超过2-3个为好。</li>
         </ol>
         </p>
-        <p><a href="index.html">目录</a>｜<a href="net.html">上一章</a>｜<a href="list">ListView</a></p>
+        <p>在安卓里，除了用Java本身的Runnable和Thread之外，比较推荐的做法是使用下面的Handler和AsyncTask。</p>
+        <h4>Handler</h4>
+        <p>其实<a target="_blank" href="http://developer.android.com/reference/android/os/Handler.html">Handler</a>本身是绑定一个消息循环<a target="_blank" href="http://developer.android.com/reference/android/os/Looper.html">Looper</a>，主要就是发送处理消息。</p>
+        <p>默认Handler绑定就是主线程的Looper，可以利用Handler的一些特性，比用下面</p>
+        <pre class="code">
+        //下面这两个一般用来做动画
+        handler.postAtTime(Runnable r, long uptimeMillis); //定时执行某个Runnable，在绑定的线程
+        handler.postDelayed(Runnable r, long delayMillis); //延时执行某个Runnable，在绑定的线程
+        //下面这两个一般用来做后台操作，对应的handler也应该绑定在线程上
+        handler.sendMessageAtTime(Message msg, long uptimeMillis); //定时发送消息
+        handler.sendMessageDelayed(Message msg, long delayMillis) //延时发送消息
+        </pre>
+        <p>那么怎么绑定Handler在线程里呢？如下，使用<a target="_blank" href="http://developer.android.com/reference/android/os/HandlerThread.html">HandlerThread</a>：</p>
+        <pre class="code">
+        class MyHandler extends Handler {
+            MyHandler(Looper looper) {
+                super(looper);
+            }
+
+            @Override
+            public void handleMessage(Message msg) {
+                switch(msg.what) {
+                    case MSG_SOMETHING_THREAD:
+                        //do something in thread
+                        //notify main thread to refresh UI
+                        mainHandler.sendMessage(mainHandler.obtainMessage(MSG_SOMETHING_MAIN);
+                        break;
+                }
+            }
+        };
+
+        HandlerThread ht = new HandlerThread("MyHandlerThread");
+        ht.start();
+        subHandler = new MyHandler(ht.getLooper());
+        mainHandler = new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                switch(msg.what) {
+                    case MSG_SOMETHING_MAIN:
+                        //do something in main thread
+                        //e.g. update UI
+                        break;
+                }
+            }
+        };
+        </pre>
+        <p>通过上面的代码，我们获得了两个Handler对象，mainHandler绑定在主线程，subHandler绑定在子线程。那么我们就可以用这两个对象相互发消息来通讯和做异步操作了。</p>
+        <pre class="code">
+        //比如用户点击了某个按钮，要读取SD卡上的很多数据，那么就用下面的代码发subHandler消息
+        subHandler.sendMessage(subHandler.obtainMessage(MSG_SOMETHING_THREAD);
+        //在subHandler处理完后，会调用下面的代码，给mainHandler发消息，刷新UI
+        mainHandler.sendMessage(mainHandler.obtainMessage(MSG_SOMETHING_MAIN);
+        </pre>
+        <h4>AsyncTask</h4>
+        <p>使用Handler是可以更加精确的控制，而且可以更加定制化，但是对于普通的应用来讲，只要求把一个耗时操作做成异步的，然后操作前后需要更新UI。这种典型需求，安卓提供了一个非常简单实用的类：<a target="_blank" href="http://developer.android.com/reference/android/os/AsyncTask.html">AsyncTask</a>。 </p>
+        <pre class="code">
+        class DownloadFilesTask extends AsyncTask<URL, Integer, Long> {
+             //真正线程里执行的函数，耗时操作
+             protected Long doInBackground(URL... urls) {
+                int count = urls.length;
+                 long totalSize = 0;
+                 for (int i = 0; i < count; i++) {
+                     totalSize += Downloader.downloadFile(urls[i]);
+                     //通知主线程，调用onProgressUpdate，刷新进度
+                     publishProgress((int) ((i / (float) count) * 100));
+                     // Escape early if cancel() is called
+                     if (isCancelled()) break;
+                 }
+             return totalSize;
+
+             }
+
+             //主线程，在doInBackground之前执行，可以设置显示进度条之类的UI操作
+             protected void onPreExecute(){
+                 progress.setVisibility(View.VISIBLE);
+             }
+
+             //主线程，和doInBackground是并行的，一般更新进度
+             protected void onProgressUpdate(Integer... progress) {
+                 setProgressPercent(progress);
+             }
+
+             //主线程，在doInBackground之后进行，更新UI
+             protected void onPostExecute(Long result) {
+                 showDialog("Downloaded " + result + " bytes");
+             }
+         };
+        //执行
+        new DownloadFilesTask().execute(url1, url2, url3);
+        </pre>
+        <p>由上面可以看到，AsyncTask把异步变的更加清晰和简单了，但是使用AsyncTask也有需要注意的，如下：</p>
+        <ol>
+            <li>AsyncTask一般都是具名使用，即定义对象，在需要的时候调用cancel方法取消执行。<span class="tip">如果已经在执行doInBackground函数时，cancel是不打断线程的，只是不执行onPostExecute方法了。如果需要可以调用cancel(true)来打断线程操作，但是一般不要这么做。</li>
+            <li>AsyncTask其实是基于线程池和Handler来实现的，而在安卓3.0开始，AsyncTask的默认并发数被改成1个，就是说只有一个线程在跑，所以你需要强制新开线程的话，可以调用executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, params)。</li>
+            <li>AsyncTask一般用于比较短时间的异步操作，如果太长时间的话，不推荐使用。</li>
+        </ol>
+        <p><a href="index.html">目录</a>｜<a href="net.html">上一章</a>｜<a href="list.html">ListView</a></p>
 	</div>
 </div>
 <div class="wrapper-footer"></div>
