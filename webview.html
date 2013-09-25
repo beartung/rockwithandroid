@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>WebView</h3>
+        <p>安卓的浏览器和iOS一样，是基于webkit的，应用里有内嵌<a target="_blank" href="http://developer.android.com/reference/android/webkit/WebView.html">WebView</a>来实现特定的功能或者减少开发量。<br>WebView的主要注意点如下：</p>
+		<ol>
+            <li>复杂的排版</li>
+            <li>主要为浏览，交互较少</li>
+            <li>支持本地的JS，CSS</li>
+            <li>支持JS和JAVA互调</li>
+            <li>不要使用JQuery之类较重的框架</li>
+            <li>支持背景透明，但是需要hack</li>
+            <li>支持多点触摸，但是2.x需要单独处理</li>
+            <li>特殊需求，比如OAuth认证，使用地图网页版</li>
+        </ol>
+        <h4>常用的设置</h4>
+        <pre class="code">
+    WebView web = (WebView)findViewById(R.id.web);
+    web.setBackgroundColor(Color.TRANSPARENT); //背景透明
+    WebSettings settings = web.getSettings()
+    settings.setJavaScriptEnabled(true);
+    settings.setDomStorageEnabled(true);
+    settings.setDefaultTextEncodingName("UTF-8");
+    settings.setAllowFileAccess(true); //能存取本地的资源，指assets和本地文件
+    settings.setLoadsImagesAutomatically(true);
+    settings.setCacheMode(WebSettings.LOAD_NO_CACHE); //关闭cache
+    settings.setSupportZoom(true);
+    settings.setUserAgentString(settings.getUserAgentString() + " XXX/xxx);
+</pre>
+        <h4>自己控制链接加载</h4>
+        <p>内嵌的WebView在加载页面时有很多的回调，可以做些特定的处理。</p>
+        <pre class="code">
+    web.setWebViewClient(new WebViewClient() {
+
+        //这里是加载url前的回调
+        public boolean shouldOverrideUrlLoading(WebView view, String url) {
+            return super.shouldOverrideUrlLoading(view, url);
+        }
+
+        //开始时，可以显示自己的进度条
+        public void onPageStarted(WebView view, String url, Bitmap favicon) {
+        }
+
+        //开始时，可以关闭自己的进度条
+        public void onPageFinished(WebView view, String url) {
+        }
+
+        //出错时的回调
+        public void onReceivedError(WebView view, int errorCode,
+                            String description, String failingUrl){
+        }
+    }
+        </pre>
+
+        <h4>支持下载</h4>
+        <p>如果链接是可以下载的资源，可以简单按下面处理：</p>
+        <pre class="code">
+    web.setDownloadListener(new DownloadListener() {
+        @Override
+        public void onDownloadStart(String url, String userAgent,
+                String contentDisposition, String mimetype, long contentLength) {
+            Intent intent = new Intent();
+            intent.setData(Uri.parse(url));
+            intent.setAction(Intent.ACTION_VIEW);
+            startActivity(intent);
+        }
+    });</pre>
+        <h4>和JS互动</h4>
+        <p>想在JAVA代码里，调用js的某个函数，比较简单，如下：</p>
+        <pre class="code">
+        web.loadUrl("javascript: r = your_function('hello, android!');"); </pre>
+        <p>反过来，JS里想要调用JAVA代码就稍微麻烦点，需要注册一个接口对象给JS，如下：</p>
+        <pre class="code">
+        class JavaScriptInterface {
+            public void demo(String word) {
+                ...
+            } 
+        };
+        web.addJavascriptInterface(new JavaScriptInterface(), "rockwithandroid");
+        //JS里调用时如下
+        window.rockwithandroid.demo("hello");
+        </pre>
+        <p>如果想得到页面里的信息，或者执行页面里的JS函数得到返回值到JAVA里的话，就是两者结合起来：</p>
+        <pre class="code">
+web.loadUrl("javascript: r = your_function('hello, android!');window.rockwithandroid.demo(r)"); </pre>
+        </pre>
+        <h4>WebApp</h4>
+        <p>对于前端工程师，其实还可以使用HTML5技术构建WebApp，也是一个选择。基本一套代码适用iOS和安卓平台，也有类似<a target="_blank" href="http://phonegap.com/">PhoneGap</a>这样的开源工具，有兴趣的同学可以试试。豆瓣音乐人就是拿PhoneGap开发的 : )</p>
+        <p><a href="index.html">目录</a>｜<a href="screen.html">上一章</a>｜<a href="widget.html">Widget</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="https://github.com/beartung/rockwithandroid">RockWithAndroid</a> by <a href="http://github.com/beartung">@Bear</a>
+	</div>
+</div>
+</body>
+</html>
