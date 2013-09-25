@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rock with Android</title>
+<link rel="shortcut icon" href="img/favicon.ico">
+<link href="css/main.css" type="text/css" rel="stylesheet">
+</head>
+<body>
+<div class="wrapper">
+<div class="container">
+    <h1>Rock with Android</h1>
+    <hr>
+	<div class="mod">
+		<h3>其他</h3>
+        <p>本文把安卓应用开发常见的所需注意点都过了一遍，本节提下一些别的需要了解的东西。</p>
+        <h4>推送</h4>
+        <p>手机的推送是一个很酷的特性，但是由于Google在中国市场的不作为，很多设备或者Rom里面Google Account都被删除了，所以基于Google官方的推送<a target="_blank" href="http://developer.android.com/google/gcm/index.html">Google Cloud Messaging</a>十分尴尬。如果是目标用户是天朝百姓的开发者，可以选择下面的推送解决方案：</p>
+        <ol>
+            <li><a target="_blank" href="http://www.igetui.com/">个推</a>，国内比较早的推送解决方案，据说微博是用的个推</li>
+            <li><a target="_blank" href="http://developer.baidu.com/cloud/push">百度云推送</a>，百度之前的内部服务，现在对外开发，已经有些应用在用了</li>
+            <li><a target="_blank" href="http://xg.qq.com/">信歌</a>，腾讯出品，比较新，了解不多</li>
+        </ol>
+        <h4>广告</h4>
+        <p>从安卓用户上赚钱不是一件很容易的事情，所以考虑加入广告是比较实际的办法。比较流行的比如<a target="_blank" href="http://www.google.com/ads/admob/">AdMob</a>，相应的安卓SDK是<a target="_blank" href="https://developers.google.com/mobile-ads-sdk/">https://developers.google.com/mobile-ads-sdk/</a>。国内的腾讯也有一个叫做<a target="_blank" href="http://e.qq.com/">广点通</a>的广告投放，也可以尝试。</p>
+        <h4>数据统计</h4>
+        <p>相对于网站，应用也是需要各种统计指标，比如激活设备数，活跃用户数等。因为安卓的渠道很多，Google Play在国内很多设备里被恶意干掉，而且体验并不好，所以分渠道统计也是很重要的点。很多应用都在用创新工场出来的<a target="_blank" href="http://www.umeng.com/">友盟</a>，一般的应用用这个统计还OK，无责任推荐。（p.s. 因为已经被阿里收购，起码不会黄，但是保不住不会偷看你的数据）</p>
+        <p>如果你的目标只是国际市场，那么也可以考虑使用<a target="_blank" href="https://developers.google.com/analytics/devguides/collection/android/v2/">Google Analytics</a>。</p>
+        <h4>One more thing</h4>
+        <p>本文大部分内容都是知识点或者经验总结，工程师可能觉得不过瘾，那么这里预告下，我会从头开发一个新的工具型App，会开源到github，欢迎大家一起来玩 ：）</p>
+        <p><a href="index.html">目录</a>｜<a href="webview.html">上一章</a>｜<a href="tips.html">建议</a></p>
+	</div>
+</div>
+<div class="wrapper-footer"></div>
+</div>
+<div class="footer">
+	<div class="container">
+        <a href="https://github.com/beartung/rockwithandroid">RockWithAndroid</a> by <a href="http://github.com/beartung">@Bear</a>
+	</div>
+</div>
+</body>
+</html>
