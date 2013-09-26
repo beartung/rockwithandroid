@@ -115,7 +115,7 @@
             //linux下面截屏并保存到电脑上
             adb shell screencap -p | sed 's/\r$//' &gt; screen.png
             //Mac OSX下面截屏并保存到电脑上
-            adb shell screencap -p | perl -pe 's/\x0D\x0A/\x0A/g &gt; screen.png
+            adb shell screencap -p | perl -pe 's/\x0D\x0A/\x0A/g' &gt; screen.png
             </pre>
             </li>
             <li>使用<a target="_blank" href="http://www.gradle.org/">Gradle</a>来构建
