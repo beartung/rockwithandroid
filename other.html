@@ -26,6 +26,15 @@
         <h4>数据统计</h4>
         <p>相对于网站，应用也是需要各种统计指标，比如激活设备数，活跃用户数等。因为安卓的渠道很多，Google Play在国内很多设备里被恶意干掉，而且体验并不好，所以分渠道统计也是很重要的点。很多应用都在用创新工场出来的<a target="_blank" href="http://www.umeng.com/">友盟</a>，一般的应用用这个统计还OK，无责任推荐。（p.s. 因为已经被阿里收购，起码不会黄，但是保不住不会偷看你的数据）</p>
         <p>如果你的目标只是国际市场，那么也可以考虑使用<a target="_blank" href="https://developers.google.com/analytics/devguides/collection/android/v2/">Google Analytics</a>。</p>
+        <h4>获取地理位置信息</h4>
+        <p>移动应用可以通过GPS或者网络的方式获取当前位置信息，一般来说，通过GPS获得地理位置往往精确度较高，但是在通信条件不好的地方可能获取不到，而通过网络信息获取地理位置精度低于GPS，但是只要网络通畅，即可保证能获取到地理位置信息</p>
+        <p>想获取地理位置信息，首先要在AndroidManifest.xml中加入获取地理位置信息的权限,(ACCESS_FINE_LOCATION允许应用从网络信息中获取地理位置
+    ，ACCESS_COARSE_LOCATION允许应用从GPS中获取地理位置)</p>
+        <pre class="code">
+        &lt;uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /&gt;
+        &lt;uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /&gt;
+        </pre>
+        <p>获取地理位置信息的相关方法均被封装在android.location包中，常用的方法有两个，getLastLocation和requestLocationUpdates,前者获取上一次进行定位的地理位置，后者监听地理位置的变化</p       
         <h4>One more thing</h4>
         <p>本文大部分内容都是知识点或者经验总结，工程师可能觉得不过瘾，那么这里预告下，我会从头开发一个新的工具型App，会开源到github，欢迎大家一起来玩 ：）</p>
         <p><a href="index.html">目录</a>｜<a href="webview.html">上一章</a>｜<a href="tips.html">建议</a></p>
