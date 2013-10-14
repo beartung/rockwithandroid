@@ -44,7 +44,7 @@
         <p>上面说过，一个Application对应一个应用，而一个应用是由一组Activity和其他东西组成的。什么叫<a target="_blank" href="http://developer.android.com/reference/android/app/Activity.html">Activity</a>呢？</p>
         <p>我打个比方，安卓的每个应用都像是一个网站，而网站是由一组网页组成的。你可以在同一个网站A里跳来跳去的浏览，而且如果一个网页里面有其他网站的一个超链接，你就跳到另外一个网站B了。当然你可以在B网站的网页跳来跳去，也能回退到网站A里玩。</p>
         <p class="tip">所以Activity就像是网页，而超链接就是安卓里面的Intent。</p>
-        <p><a target="_blank" href="http://developer.android.com/reference/android/content/Intent.html">Intent</a>会在以后的章节里介绍，现在知道启动或跳转到一个Activity的方式就是调用Context的startActivity方法，参数是目的Activity所接受的Intent。Activity里一般都做什么呢？按照MVC的模式，是Controller的角色，单实际上其实有点类似iOS开发的ViewController的作用，包含了主要的业务逻辑和部分View层的逻辑。</p>
+        <p><a target="_blank" href="http://developer.android.com/reference/android/content/Intent.html">Intent</a>会在以后的章节里介绍，现在知道启动或跳转到一个Activity的方式就是调用Context的startActivity方法，参数是目的Activity所接受的Intent。Activity里一般都做什么呢？按照MVC的模式，是Controller的角色，但实际上其实有点类似iOS开发的ViewController的作用，包含了主要的业务逻辑和部分View层的逻辑。</p>
         <img src="img/activity_lifecycle.png">
         <p>上图是Activity的生命周期。一般在onCreate用setContextView来设置Layout，Activity一般对应一个Layout，当然是可以动态的换Layout的。安卓的另外还会通过findViewById完成各种View对象的赋值，绑定负责View事件的处理各种Listener。onResume一般是恢复上次打开时的状态，设置好相应的UI；onPause则是保存改保存的数据和状态；onDestroy释放一些资源等清理操作。</p>
         <p>假设有两个Activity：A和B，那么从A点击一个按钮启动B，是用startActivity(new Intent(B.class)); 那么需要B里用户操作完了，返回A，并且带数据给A怎么办呢？ 那就是用startActivityForResult这个函数了。还有什么办法能在Activity直接来传递信息呢？具体会在Intent章节来讲。<br>顺便提一下，调用finish()函数就会关闭当前的Activity。</p>
