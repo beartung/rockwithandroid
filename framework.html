@@ -47,7 +47,7 @@
         <p><a target="_blank" href="http://developer.android.com/reference/android/content/Intent.html">Intent</a>会在以后的章节里介绍，现在知道启动或跳转到一个Activity的方式就是调用Context的startActivity方法，参数是目的Activity所接受的Intent。Activity里一般都做什么呢？按照MVC的模式，是Controller的角色，但实际上其实有点类似iOS开发的ViewController的作用，包含了主要的业务逻辑和部分View层的逻辑。</p>
         <img src="img/activity_lifecycle.png">
         <p>上图是Activity的生命周期。一般在onCreate用setContextView来设置Layout，Activity一般对应一个Layout，当然是可以动态的换Layout的。安卓的另外还会通过findViewById完成各种View对象的赋值，绑定负责View事件的处理各种Listener。onResume一般是恢复上次打开时的状态，设置好相应的UI；onPause则是保存改保存的数据和状态；onDestroy释放一些资源等清理操作。</p>
-        <p>假设有两个Activity：A和B，那么从A点击一个按钮启动B，是用startActivity(new Intent(B.class)); 那么需要B里用户操作完了，返回A，并且带数据给A怎么办呢？ 那就是用startActivityForResult这个函数了。还有什么办法能在Activity直接来传递信息呢？具体会在Intent章节来讲。<br>顺便提一下，调用finish()函数就会关闭当前的Activity。</p>
+        <p>假设有两个Activity：A和B，那么从A点击一个按钮启动B，是用startActivity(new Intent(B.class)); 那么需要B里用户操作完了，返回A，并且带数据给A怎么办呢？ 那就是用startActivityForResult这个函数了。还有什么办法能在Activity之间来传递信息呢？具体会在Intent章节来讲。<br>顺便提一下，调用finish()函数就会关闭当前的Activity。</p>
         <h4>View</h4>
         <p>做安卓应用大部分时间都在和各种View打交道。在一个Activity里面你看到的各种控件都是View，比如Button, TextView, ImageView等等。安卓的View是一个树型的结构，可以认为每个Activity对应一棵树，具体什么样子呢？可以用sdk自带的<a target="_blank" href="http://developer.android.com/tools/help/monitor.html">Android Device Monitor (tools/monitor)</a>来看具体层级结构。（之前的hierarchyviewer已经不建议用了。）<br>例如下面电台的主页面：</p>
         <img class="img-full" src="img/monitor.png">
