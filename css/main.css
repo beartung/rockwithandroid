@@ -131,3 +131,17 @@ img.logo{
 	font-style: bold;
 	color: #CA3624;
 }
+
+blockquote {
+    margin-top: 10px;
+    padding: 0 20px;
+    background: url(http://img3.douban.com/f/sns/3aa1569bf2c602f12f5744a65ff458d179c4c765/pics/quotel.gif) no-repeat 2px 4px;
+}
+
+blockquote {
+    display: block;
+    -webkit-margin-before: 1em;
+    -webkit-margin-after: 1em;
+    -webkit-margin-start: 40px;
+    -webkit-margin-end: 40px;
+}

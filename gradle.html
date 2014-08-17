@@ -13,28 +13,296 @@
     <hr>
 	<div class="mod">
 		<h3>Gradle构建安卓项目</h3>
-        <p>安卓项目的build最早是ant，然后是maven，现在google官方在主推的是gradle。</p>
-        <p><a href="http://www.gradle.org/" target="_blank">gradle</a>是基于Groovy的通用build工具，本文只是从安卓的角度。</p>
-        <h4></h4>
+        <p>安卓项目的构建工具最早是ant，然后是maven，现在google官方在主推的是gradle。</p>
+        <p><a href="http://www.gradle.org/" target="_blank">gradle</a>是基于Groovy， 基于DSL语法的自动化构建工具，本文只是从安卓的角度介绍下gradle的使用和特点。
+        <blockquote>Gradle combines the power and flexibility of Ant with the dependency management and conventions of Maven into a more effective way to build.</blockquote>
+        上面是gradle官网的介绍原文，还是挺贴切的。</p>
+        <h4>Gradle的基本使用</h4>
 		<ol>
             <li>当前推荐版本和安卓插件版本</li>
+            <p>gradle最新版本是2.0，但是android plugin最新版是0.12，依赖的是gradle 1.12。本文里面的内容都是以java 1.7，gradle 1.12，gradle android plugin 0.12，build tools 20.0.0的环境为开发环境的。</p>
+            <br>
             <li>使用gradle模板创建安卓项目</li>
-            <li>自动检测SDK和build tools版本</li>
-            <li>配置repo和flatDir</li>
+            <p>下面是用android sdk创建一个用gradle模板的安卓项目</p>
+            <pre class="code">android create project -n test -t android-19 -p test -k com.test -a Test -g -v 0.12.0</pre>
+            <p>下图是建好的目录结构：build.gradle就是构建配置脚本；gradlew和gradle目录是一个wrapper，用来在没有gradle的环境下来build时，代替grale命令，直接可以使用./gradlew；</p>
+            <img src="img/file_list.png" class="img-full">
+            <p>而其他目录结构也和用ant或者maven创建的略有不同，比如AndroidManifest的位置等等，在下面映射目录一节具体介绍。</p>
+            <li>最简单的build.gradle</li>
+            <pre class="code">
+buildscript {
+    repositories {
+        //使用maven的默认repo，也可以加第三方的repo
+        mavenCentral()
+    }
+    dependencies {
+        //指定特定版本，也可以是0.12.+表示0.12.0以上的版本。
+        classpath 'com.android.tools.build:gradle:0.12.0'
+    }
+}
+apply plugin: 'android' //不需要再apply java的插件
+
+android {
+    //这里的sdk和buildtools的版本号，需要精确指定，感觉比较弱，后面有可以自动配置的办法
+    compileSdkVersion 'android-19'
+    buildToolsVersion '20.0.0'
+
+    buildTypes {
+        release {
+            runProguard false
+            proguardFile getDefaultProguardFile('proguard-android.txt')
+        }
+    }
+}
+            </pre>
+            <p>gradle build后就生成build目录，build/outputs/apk是生成的apk，而.gradle目录是一个cache目录，这2个目录都建议加入到gitignore里面。</p>
             <li>映射目录 sourceSets</li>
+<p>比较传统的目录结构是AndroidManifest.xml, src, res, libs, assets目录都是在项目根目录的，下面的配置就可以指定不同的目录的具体位置。可以使用安卓的目录结构，而不是更深的java风格的项目目录层级。</p>
+            <pre class="code">
+android {
+    ...
+
+    sourceSets {
+        main {
+            manifest.srcFile 'AndroidManifest.xml'
+            java.srcDirs = ['src']
+            aidl.srcDirs = ['src']
+            res.srcDirs = ['res']
+            assets.srcDirs = ['assets']
+            jniLibs.srcDirs = ['libs']
+        }
+    }
+    ...
+}
+            </pre>
+            <li>自动检测SDK和build tools版本</li>
+            <p>gradle本身是可以编程的语言，所以很多事情可以通过编写函数来增强。上文提到手写sdk和buildtools的版本是很烦的一件事情，下面的函数就可以自动检测本地环境。具体的实现见下面链接的gist。</p>
+            <pre class="code">
+android {
+    ...
+    compileSdkVersion <a href="https://gist.github.com/beartung/82da34d9c9c3b2239e34" target="_blank">highestSdkAvailable(20)</a>
+    buildToolsVersion <a href="https://gist.github.com/beartung/82da34d9c9c3b2239e34" target="_blank">latestBuildToolsAvailable("20.0.0")</a>
+    ...
+}
+            </pre>
+            <br>
             <li>配置签名 signingConfigs</li>
+            <p>配置release包所有的签名，里面的参数要用真正的值换掉</p>
+            <pre class="code">
+android {
+    ...
+    signingConfigs {
+        release {
+            storeFile file("/your.keydir/your.keystore")
+            storePassword "your.password"
+            keyAlias "your.key.alias"
+            keyPassword "your.alias.passord"
+        }
+    }
+    ...
+}
+            </pre>
             <li>配置 buildTypes</li>
-            <li>忽略lint的警告 lintOptions</li>
-            <li>productFlavors和渠道包</li>
-            <li>集成ndk-build</li>
-            <li>管理远程依赖和本地依赖</li>
-            <li>库项目依赖 settings.gradle</li>
-            <li>重命名生成的apk</li>
-            <li>常用命令参数</li>
+            <p>buildTypes其实就是不同的任务类型，对应安卓来说，最常见的是下面的release，beta，debug三种类型。</p>
+            <pre class="code">
+android {
+    ...
+    buildTypes {
+
+        release {
+            proguardFile 'proguard-project.txt'
+            signingConfig signingConfigs.release //使用release签名
+            jniDebugBuild false
+            debuggable false //关闭debug模式
+            runProguard true //混淆
+            zipAlign true
+        }
+
+        beta {
+            proguardFile 'proguard-project.txt'
+            signingConfig signingConfigs.release //同样用release签名
+            jniDebugBuild false
+            debuggable true
+            runProguard false
+            zipAlign true
+        }
+
+        debug {
+            applicationIdSuffix ".debug" //包名加debug后缀 
+            jniDebugBuild true
+            debuggable true
+            zipAlign true
+        }
+    ...
+}
+            </pre>
+            <p>上面release包和beta包，同样使用release签名，是方便测试，具体可以根据实际情况来调整混淆及其他开关。debug包加后缀的目的，是可以同时安装debug和release的包，也是为了方便调试的。</p>
         </ol>
-        <h4></h4>
-        <p><a href="index.html">目录</a>｜<a href="">上一章</a>｜<a href=""></a></p>
-	</div>
+        <p>通过上面的配置，就有了一个基本的安卓项目的构建脚本了。运行gradle build就可以打出来全部的包了。</p>
+        <br>
+        <h4>Gralde依赖管理</h4>
+        <p>gradle真正强大的地方不在于比较人性化简明的语法，而是在方便灵活的依赖管理。</p>
+        <ol>
+            <li>配置repo和flatDir</li>
+            <p>下面的repositories需要在build.gradle的顶级节点配置，不能写在android或buildscript里面。</p>
+            <pre class="code">
+repositories {
+    //maven的repo，也就是http://repo1.maven.org/maven2
+    mavenCentral() //所以可以直接使用maven的众多jar，aar包
+    //本地的maven repo，比较少用
+    mavenLocal()
+    //第三方的maven repo
+    maven {
+        url "http://mente.github.io/facebook-api-android-aar"
+    }
+    //使用本地文件夹作为repo
+    flatDir {
+        dirs 'aars'
+    }
+} </pre>
+            <li>配置远程依赖和本地依赖</li>
+            <pre class="code">
+dependencies {
+    //support包
+    compile 'com.android.support:support-v4:20.0.0'
+    //aar
+    compile ('fr.avianey:facebook-android-api:3.16.0@aar') {
+         transitive = true
+    }
+    //jar
+    compile 'com.jakewharton:butterknife:5.1.2'
+    //本地libs目录里的jar
+    compile files('libs/umeng_sdk.jar')
+    //暴力引入lib目录里的所有jar包，不推荐
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+} </pre>
+            <li>模块项目依赖 settings.gradle</li>
+            <p>因为现在的安卓项目越来越复杂，所以模块化是趋势，而且依赖的库有时候是开源的，也涉及到二次开发的需求。settings.gradle的模式就能很好的支撑模块化的复杂依赖构建的场景。</p>
+            <p>首先，在项目根目录下编写build.gradle, settings.gradle文件，而其他模块项目，主项目，都是二级目录。</p>
+            <pre class="code">
+    android-demo:
+        |__________ app  //应用主项目
+        |__________ app-lib //依赖的库项目
+        |__________ facebook-sdk //第三方sdk代码，比如facebook
+        |__________ build.gradle
+        |__________ setings.gradle
+            </pre>
+            <p>根目录的build.gradle可以配置所有模块都有的基本配置，如下面的例子:
+            <pre class="code">
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:0.12.+'
+    }
+}
+
+allprojects {
+    repositories {
+        mavenCentral()
+    }
+    tasks.withType(Compile) {
+        options.encoding = 'UTF-8'
+    }
+}</pre>
+        <p>根目录的settings.gradle是配置build时都包含那些模块</p>
+        <pre class="code">
+include ':facebook-sdk'
+include ':app-lib'
+include ':app'</pre>
+        <p>然后就是在每个模块的子目录里面去配置各自的build.gradle就好了，但是要添加依赖的模块。比如上面app目录的build.gradle就得添加相应的依赖。</p>
+        <pre class="code">
+dependencies {
+    ...
+    compile project(':facebook')
+    compile project(':app-lib')
+    ...
+}
+        </pre>
+        </ol>
+        <h4>Gralde小技巧</h4>
+        <ol>
+            <li>集成ndk-build</li>
+        <p>在目录映射那里设置了jniLibs.srcDirs = ['libs']的话，默认里面的so会自动打包到apk里。但是如果想在gradle build时，重新编译ndk的代码的话，就需要加入下面的配置</p>
+        <pre class="code">import org.apache.tools.ant.taskdefs.condition.Os
+
+task ndkBuild(type: Exec) {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+      commandLine 'ndk-build.cmd', '-j'
+    } else {
+      commandLine 'ndk-build', '-j'
+    }
+}
+tasks.withType(JavaCompile) {
+    compileTask -&gt; compileTask.dependsOn ndkBuild
+} </pre>
+            <li>忽略lint的警告 lintOptions</li>
+<pre class="code">
+android {
+    lintOptions {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+</pre>
+            <li>重命名生成的apk</li>
+<pre class="code">
+android {
+    defaultConfig {
+        applicationVariants.all {
+            variant -&gt; <a href="https://gist.github.com/beartung/178431207d535faffabc#file-gradle-rename-apk" target="_blank">appendVersionNameVersionCode(variant)</a>
+        }
+    }
+}
+</pre>
+            <li>productFlavors和渠道包</li>
+            <p>productFlavors其实是另外一个维度，和buildTypes是相乘的关系。我们可以利用这点来打安卓的渠道包。</p>
+<pre class="code">
+android {
+    productFlavors {
+        googleplay{
+        }
+        wandoujia{
+        }
+        ...
+    }
+}
+</pre>
+            <p>但是其实无论是umeng还是GA，flurry等渠道包，有更加节能高效的打渠道包方案: 利用aapt add的方式，注入assets文件，达到改变渠道的目的。（比flavors和基于apktool的方案都要完美，当然还有直接用apk末尾增加信息的方式，也是不错的选择，这里不做展开了。）</p>
+            <li>发布组件</li>
+            <p>很多公司都自己利用<a target="_blank" href="http://www.sonatype.org/nexus/">Sonatype Nexus</a>项目搭建了自己的maven库，那么一些模块库，也是有打包后上传到maven企业源的需求的。</p>
+            <pre class="code">
+apply plugin: 'maven'
+
+ext.pomCfg = {
+  name 'app-lib'
+  description 'project_desc'
+  ...
+}
+
+uploadArchives.repositories.mavenDeployer {
+  repository(url: 'repo_url') {
+        authentication(
+          userName: repo_user,
+          password: repo_passwd)
+    ...
+  }
+  pom.project pomCfg
+}
+</pre>
+            <li>常用命令参数</li>
+        <pre class="code">
+gradle --help
+gradle tasks  //列出task列表
+gradle asD (gradle assembleDebug) //编译debug打包
+gradle asR (gradle assembleRelease) //编译release打包
+gradle asD --refresh-dependencies  //强制刷新依赖
+gradle asD --parallel //并行编译
+gradle asD --parallel-threads 3
+gradle clean</pre>
+        </ol>
+    </div>
 </div>
 <div class="wrapper-footer"></div>
 </div>
